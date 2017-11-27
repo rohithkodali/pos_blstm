@@ -18,14 +18,17 @@ class ModelLoader(object):
         self.ckpt_path = ckpt_path
         self.X_inputs =  tf.placeholder(tf.int32, [None, config.timestep_size], name='X_inputs')
         self.y_inputs = tf.placeholder(tf.int32, [None, config.timestep_size], name='y_input')
-        with tf.variable_scope('embedding'):
-            with tf.device("/cpu:0"):
-                embedding = tf.get_variable("embedding", [config.vocab_size, config.embedding_size], dtype=tf.float32)
-        self.cost, self.accuracy, self.correct_prediction, self.y_pred = pb.bi_lstm(self.X_inputs, self.y_inputs, embedding)
+            
+        with tf.device("/cpu:0"):
+            embedding = tf.get_variable("pos_embedding", [config.vocab_size, config.embedding_size], dtype=tf.float32)
+
+        with tf.variable_scope('pos_blstm'):
+            self.cost, self.accuracy, self.correct_prediction, self.y_pred = pb.bi_lstm(self.X_inputs, self.y_inputs)
         if len(glob.glob(self.ckpt_path + '.data*')) > 0:
             print 'Loading model parameters from %s ' % ckpt_path
             all_vars = tf.global_variables()
-            tf.train.Saver(all_vars).restore(self.session, ckpt_path)
+            model_vars = [k for k in all_vars if k.name.startswith("pos_blstm")]
+            tf.train.Saver(model_vars).restore(self.session, ckpt_path)
         else:
             print 'Model not found, creat with fresh parameters....'
             self.session.run(tf.global_variables_initializer())

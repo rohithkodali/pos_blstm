@@ -89,9 +89,10 @@ def lstm_cell():
     cell = rnn.LSTMCell(config_ch.hidden_size, reuse=tf.get_variable_scope().reuse)
     return rnn.DropoutWrapper(cell, output_keep_prob=config_ch.keep_prob)
          
-def bi_lstm(X_inputs, y_inputs, embedding):
+def bi_lstm(X_inputs, y_inputs):
     """build the bi-LSTMs network. Return the y_pred"""
     # X_inputs.shape = [batchsize, timestep_size]  ->  inputs.shape = [batchsize, timestep_size, embedding_size]
+    embedding = tf.get_variable("pos_embedding", [config_ch.vocab_size, config_ch.embedding_size], dtype=tf.float32)
     inputs = tf.nn.embedding_lookup(embedding, X_inputs)  
     
     # ** 1.构建前向后向多层 LSTM
@@ -205,13 +206,13 @@ def main():
     data_valid = BatchGenerator(X_valid, y_valid, shuffle=False)
     data_test = BatchGenerator(X_test, y_test, shuffle=False)
     print 'Finished creating the data generator.'
-    with tf.variable_scope('embedding'):
-        embedding = tf.get_variable("embedding", [config_ch.vocab_size, config_ch.embedding_size], dtype=tf.float32)
+
     with tf.variable_scope('Inputs'):
         X_inputs = tf.placeholder(tf.int32, [None, config_ch.timestep_size], name='X_input')
         y_inputs = tf.placeholder(tf.int32, [None, config_ch.timestep_size], name='y_input')   
-    
-    cost, accuracy, correct_prediction, _ = bi_lstm(X_inputs, y_inputs, embedding)
+        
+    with tf.variable_scope('pos_blstm'):
+        cost, accuracy, correct_prediction, _ = bi_lstm(X_inputs, y_inputs)
 
     # ***** 优化求解 *******
     tvars = tf.trainable_variables()  # 获取模型的所有参数
